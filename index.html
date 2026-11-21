@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, viewport-fit=cover">
+  <title>BUNKERLYPSO - 2D Zombie Survival</title>
+  <link rel="stylesheet" href="assets/css/style.css?v=2.7">
+</head>
+<body>
+  <div id="game-container">
+    <!-- Main game canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- CRT / Film Grain & Vignette Overlay -->
+    <div id="vignette-overlay"></div>
+    <div id="grain-overlay"></div>
+    <div id="damage-overlay"></div>
+
+    <!-- Minimalist Authentic WaW HUD -->
+    <div id="hud">
+      <!-- Top Left: Current Room / Zone Indicator -->
+      <div id="zone-display">
+        <span class="zone-prefix">ZONE //</span>
+        <span id="zone-name">COMMAND BUNKER</span>
+      </div>
+      <div id="hud-difficulty">
+        <span id="hud-diff-icon">🟢</span>
+        <span id="hud-diff-text">NORMAL</span>
+      </div>
+
+      <!-- Top / Center Interaction Prompt -->
+      <div id="interaction-prompt" class="hidden">
+        <span class="key-hint">F</span> <span id="prompt-text">Hold to Rebuild</span>
+      </div>
+
+      <!-- Action status: Repairing or Reloading progress bar -->
+      <div id="action-progress-container" class="hidden">
+        <div id="action-label">RELOADING...</div>
+        <div class="progress-bar-bg">
+          <div id="action-progress-fill"></div>
+        </div>
+      </div>
+
+      <!-- Center Dynamic Crosshair -->
+      <div id="crosshair">
+        <div class="crosshair-line ch-top"></div>
+        <div class="crosshair-line ch-bottom"></div>
+        <div class="crosshair-line ch-left"></div>
+        <div class="crosshair-line ch-right"></div>
+        <div id="hit-marker" class="hidden">
+          <div class="hm-line hm-tl"></div>
+          <div class="hm-line hm-tr"></div>
+          <div class="hm-line hm-bl"></div>
+          <div class="hm-line hm-br"></div>
+        </div>
+      </div>
+
+      <!-- Active Power-ups Bar -->
+      <div id="powerups-container"></div>
+
+      <!-- Bottom Left: Classic Blood-Red Roman Numeral Round Display -->
+      <div id="round-display">
+        <div id="round-title">ROUND</div>
+        <div id="round-number">I</div>
+      </div>
+
+      <!-- Bottom Right: Points, Weapon, Ammo & Perks -->
+      <div id="player-status">
+        <!-- Active Perks Icons -->
+        <div id="perks-list"></div>
+
+        <!-- Score / Points Counter -->
+        <div id="score-counter">
+          <span class="score-dollar">$</span><span id="score-val">500</span>
+        </div>
+
+        <!-- Weapon & Ammo Display -->
+        <div id="weapon-display">
+          <div id="weapon-name">COLT M1911</div>
+          <div id="ammo-counter">
+            <span id="ammo-clip">8</span><span class="ammo-slash">/</span><span id="ammo-reserve">32</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Touch & Mobile Controls HUD (Only shown when mobile device is detected) -->
+    <div id="mobile-controls" class="hidden">
+      <!-- Left Movement Joystick Zone -->
+      <div id="mobile-joystick-zone-move" class="joystick-touch-zone">
+        <div id="joystick-move-base" class="joystick-base">
+          <div class="joystick-cross">
+            <span class="j-arrow j-up">▲</span>
+            <span class="j-arrow j-right">▶</span>
+            <span class="j-arrow j-down">▼</span>
+            <span class="j-arrow j-left">◀</span>
+          </div>
+          <div id="joystick-move-knob" class="joystick-knob">
+            <div class="knob-core"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Aim & Action Buttons Zone -->
+      <div id="mobile-actions-zone" class="actions-touch-zone">
+        <!-- Aim Thumbstick (Dual-Stick Aiming) -->
+        <div id="joystick-aim-base" class="joystick-base joystick-aim">
+          <div class="aim-crosshair-icon">✛</div>
+          <div id="joystick-aim-knob" class="joystick-knob joystick-knob-aim">
+            <div class="knob-core knob-core-aim"></div>
+          </div>
+        </div>
+
+        <!-- Primary Fire Button -->
+        <button id="btn-touch-fire" class="touch-btn touch-btn-fire" type="button" aria-label="Fire Weapon">
+          <div class="fire-btn-glow"></div>
+          <div class="fire-btn-icon">
+            <svg viewBox="0 0 24 24" class="svg-fire">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none"/>
+              <line x1="12" y1="2" x2="12" y2="7" stroke="currentColor" stroke-width="2"/>
+              <line x1="12" y1="17" x2="12" y2="22" stroke="currentColor" stroke-width="2"/>
+              <line x1="2" y1="12" x2="7" y2="12" stroke="currentColor" stroke-width="2"/>
+              <line x1="17" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="2"/>
+              <circle cx="12" cy="12" r="3.5" fill="currentColor"/>
+            </svg>
+          </div>
+          <span class="touch-btn-title">FIRE</span>
+        </button>
+
+        <!-- Reload (R) Button -->
+        <button id="btn-touch-reload" class="touch-btn touch-btn-reload" type="button" aria-label="Reload">
+          <span class="touch-glyph">↻</span>
+          <span class="touch-btn-title">RELOAD</span>
+        </button>
+
+        <!-- Interact / Action (F) Button -->
+        <button id="btn-touch-interact" class="touch-btn touch-btn-interact" type="button" aria-label="Interact or Rebuild">
+          <span class="touch-key-badge">F</span>
+          <span class="touch-btn-title">ACTION</span>
+        </button>
+
+        <!-- Melee Knife (V) Button -->
+        <button id="btn-touch-knife" class="touch-btn touch-btn-knife" type="button" aria-label="Melee Attack">
+          <span class="touch-glyph">⚔</span>
+          <span class="touch-btn-title">KNIFE</span>
+        </button>
+
+        <!-- Switch Weapon (1-2) Button -->
+        <button id="btn-touch-switch" class="touch-btn touch-btn-switch" type="button" aria-label="Switch Weapon">
+          <span class="touch-glyph">⇄</span>
+          <span class="touch-btn-title" id="touch-switch-lbl">WEAPON</span>
+        </button>
+      </div>
+
+      <!-- Top Mobile Navigation (Pause & Fullscreen) -->
+      <div id="mobile-top-bar">
+        <button id="btn-touch-pause" class="mobile-top-btn" type="button" title="Pause Game">
+          <span>⏸</span>
+        </button>
+        <button id="btn-touch-fullscreen" class="mobile-top-btn" type="button" title="Toggle Fullscreen">
+          <span>⛶</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Start / Title Screen Modal (BUNKERLYPSO Main Menu) -->
+    <div id="start-screen" class="overlay-screen tv-bunker-screen">
+      <!-- Dark Room & CRT Ambient Overlays -->
+      <div class="tv-ambient-fog"></div>
+      <div class="tv-lamp-spotlight"></div>
+
+      <!-- 1. Top Right: Rank & BC Wallet -->
+      <div class="menu-top-right-hud">
+        <div class="rpg-profile-bar">
+          <div class="profile-rank">
+            <span class="rank-badge" id="menu-rank-badge">🎖️</span>
+            <div class="rank-info">
+              <span class="rank-title" id="menu-rank-title">PRIVATE (RANK 1)</span>
+              <div class="rank-progress-bar"><div class="rank-progress-fill" id="menu-rank-progress"></div></div>
+            </div>
+          </div>
+          <div class="profile-wallet" title="Bullet Coins (BC)">
+            <span class="bc-bullet-icon">
+              <svg viewBox="0 0 24 24" class="svg-bullet"><path d="M12 2C10.5 4 8 8 8 13V20H16V13C16 8 13.5 4 12 2Z" fill="#f5c518" stroke="#8a6d00" stroke-width="1.2"/><rect x="7.5" y="20" width="9" height="2.5" rx="0.5" fill="#c49a00"/><line x1="8.5" y1="13" x2="15.5" y2="13" stroke="#ffeb80" stroke-width="1"/></svg>
+            </span>
+            <span class="bc-amount" id="menu-bc-amount">0</span>
+            <span class="bc-unit">BC</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Left Sidebar: Clean Menu Navigation -->
+      <aside class="menu-left-sidebar menu-sidebar-clean">
+        <!-- Logo / Title Area -->
+        <div class="sidebar-brand-clean">
+          <div class="tactical-code">// OUTPOST 115</div>
+          <h1 class="waw-title title-glow">BUNKERLYPSO</h1>
+          <h2 class="waw-subtitle">2D ZOMBIE SURVIVAL</h2>
+        </div>
+
+        <!-- Clean Menu Buttons List -->
+        <nav class="sidebar-clean-nav">
+          <button id="btn-menu-difficulty" class="clean-menu-btn" type="button">
+            <span class="clean-btn-arrow">&gt;</span>
+            <span class="btn-clean-text">DIFFICULTY</span>
+            <span class="btn-diff-indicator" id="menu-current-diff">[NORMAL]</span>
+          </button>
+
+          <button id="btn-menu-upgrades" class="clean-menu-btn" type="button">
+            <span class="clean-btn-arrow">&gt;</span>
+            <span class="btn-clean-text">ARMORY &amp; UPGRADES</span>
+          </button>
+
+          <button id="btn-menu-stats" class="clean-menu-btn" type="button">
+            <span class="clean-btn-arrow">&gt;</span>
+            <span class="btn-clean-text">CAREER STATS</span>
+          </button>
+
+          <button id="btn-menu-settings" class="clean-menu-btn" type="button">
+            <span class="clean-btn-arrow">&gt;</span>
+            <span class="btn-clean-text">SETTINGS</span>
+          </button>
+
+          <button id="btn-menu-cheats" class="clean-menu-btn" type="button">
+            <span class="clean-btn-arrow">&gt;</span>
+            <span class="btn-clean-text">DEV CONSOLE [~ / F1]</span>
+          </button>
+        </nav>
+
+        <!-- Clean Minimal Controls Guide -->
+        <div class="sidebar-clean-guide" id="menu-controls-guide">
+          <div class="guide-row"><span>WASD</span><span>MOVE</span></div>
+          <div class="guide-row"><span>MOUSE</span><span>AIM &amp; FIRE</span></div>
+          <div class="guide-row"><span>R</span><span>RELOAD</span></div>
+          <div class="guide-row"><span>F</span><span>INTERACT</span></div>
+          <div class="guide-row"><span>V</span><span>MELEE (+130)</span></div>
+          <div class="guide-row"><span>1 - 2</span><span>WEAPONS</span></div>
+        </div>
+      </aside>
+
+      <!-- 3. TV Play Button Area -->
+      <div class="tv-zone-container">
+        <div class="tv-play-wrapper">
+          <div class="tv-play-lamp-glow"></div>
+          <button id="btn-start" class="waw-button btn-tv-start" type="button">
+            <div class="btn-glare"></div>
+            <div class="btn-pulse-wave"></div>
+            <div class="btn-tv-content">
+              <span class="btn-badge-tv"><span class="badge-flicker"></span> SIGNAL ACQUIRED</span>
+              <span class="btn-tv-main">ENTER BUNKER</span>
+              <span class="btn-tv-sub">START GAME</span>
+            </div>
+          </button>
+
+          <div class="tv-screen-badge">
+            <span class="screen-scan-line"></span>
+            <span class="tv-status-txt">EMERGENCY BROADCAST // SURVIVE THE HORDE</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Difficulty Selection Modal -->
+    <div id="difficulty-screen" class="overlay-screen hidden">
+      <div class="screen-content difficulty-modal">
+        <div class="modal-tactical-header">
+          <div class="modal-tactical-tag">// OPERATION SETTINGS</div>
+          <h1 class="modal-clean-title">SELECT DIFFICULTY</h1>
+          <h2 class="modal-clean-subtitle">CHOOSE YOUR CHALLENGE</h2>
+        </div>
+
+        <div class="difficulty-cards-container">
+          <button class="diff-btn active" data-diff="NORMAL" id="diff-btn-normal" type="button">
+            <div class="diff-card-header">
+              <span class="diff-card-title"><span class="clean-btn-arrow">&gt;</span> NORMAL</span>
+              <span class="diff-card-badge">[STANDARD]</span>
+            </div>
+            <div class="diff-card-desc">Balanced waves, standard speed, lit bunker.</div>
+          </button>
+
+          <button class="diff-btn" data-diff="HARD" id="diff-btn-hard" type="button">
+            <div class="diff-card-header">
+              <span class="diff-card-title"><span class="clean-btn-arrow">&gt;</span> HARD</span>
+              <span class="diff-card-badge diff-badge-hard">[CHALLENGE]</span>
+            </div>
+            <div class="diff-card-desc">Faster zombies, denser hordes, lit bunker.</div>
+          </button>
+
+          <button class="diff-btn" data-diff="NIGHTMARE" id="diff-btn-nightmare" type="button">
+            <div class="diff-card-header">
+              <span class="diff-card-title"><span class="clean-btn-arrow">&gt;</span> NIGHTMARE</span>
+              <span class="diff-card-badge diff-badge-nightmare">[LETHAL]</span>
+            </div>
+            <div class="diff-card-desc">Deadly sprinters, pitch black, flashlight only.</div>
+          </button>
+        </div>
+
+        <div class="diff-info-box" id="diff-unlock-hint"></div>
+
+        <div class="modal-bottom-actions">
+          <button id="btn-close-difficulty" class="clean-modal-btn" type="button">
+            <span class="clean-btn-arrow">&gt;</span> CONFIRM
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pause Screen Modal -->
+    <div id="pause-screen" class="overlay-screen hidden">
+      <div class="screen-content menu-modal">
+        <div class="modal-tactical-header">
+          <div class="modal-tactical-tag">// SYSTEM PAUSED</div>
+          <h1 class="modal-clean-title">GAME PAUSED</h1>
+        </div>
+
+        <nav class="clean-pause-nav">
+          <button id="btn-resume" class="clean-menu-btn" type="button">
+            <span class="clean-btn-arrow">&gt;</span>
+            <span class="btn-clean-text">RESUME</span>
+          </button>
+          <button id="btn-pause-settings" class="clean-menu-btn" type="button">
+            <span class="clean-btn-arrow">&gt;</span>
+            <span class="btn-clean-text">SETTINGS</span>
+          </button>
+          <button id="btn-pause-cheats" class="clean-menu-btn" type="button">
+            <span class="clean-btn-arrow">&gt;</span>
+            <span class="btn-clean-text">DEV CONSOLE</span>
+          </button>
+          <button id="btn-quit-main" class="clean-menu-btn clean-btn-danger" type="button">
+            <span class="clean-btn-arrow">&gt;</span>
+            <span class="btn-clean-text">MAIN MENU</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-screen" class="overlay-screen hidden">
+      <div class="screen-content settings-modal">
+        <div class="modal-tactical-header">
+          <div class="modal-tactical-tag">// CONFIGURATION</div>
+          <h1 class="modal-clean-title">SETTINGS</h1>
+        </div>
+
+        <div class="settings-container">
+          <!-- Audio Settings -->
+          <div class="settings-section">
+            <h3 class="section-title">AUDIO</h3>
+            <div class="setting-row">
+              <label for="slider-master-volume">Master Volume</label>
+              <div class="slider-wrapper">
+                <input type="range" id="slider-master-volume" min="0" max="100" value="80">
+                <span id="label-master-volume" class="slider-val">80%</span>
+              </div>
+            </div>
+            <div class="setting-row">
+              <label for="slider-music-volume">Music</label>
+              <div class="slider-wrapper">
+                <input type="range" id="slider-music-volume" min="0" max="100" value="70">
+                <span id="label-music-volume" class="slider-val">70%</span>
+              </div>
+            </div>
+            <div class="setting-row">
+              <label for="slider-sfx-volume">Sound Effects (SFX)</label>
+              <div class="slider-wrapper">
+                <input type="range" id="slider-sfx-volume" min="0" max="100" value="100">
+                <span id="label-sfx-volume" class="slider-val">100%</span>
+              </div>
+            </div>
+            <div class="setting-row">
+              <label for="slider-ambience-volume">Ambience</label>
+              <div class="slider-wrapper">
+                <input type="range" id="slider-ambience-volume" min="0" max="100" value="50">
+                <span id="label-ambience-volume" class="slider-val">50%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gameplay & Lighting Mode Settings -->
+          <div class="settings-section">
+            <h3 class="section-title">GRAPHICS &amp; LIGHTING</h3>
+            <div class="setting-row toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">Flashlight &amp; Shadows</div>
+                <div class="toggle-desc">Turn off for fully lit map (Safe Mode).</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="toggle-flashlight" checked>
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Mobile Touch Controls Settings -->
+          <div class="settings-section" id="settings-mobile-section">
+            <h3 class="section-title">TOUCH CONTROLS</h3>
+            <div class="setting-row toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">Touch HUD</div>
+                <div class="toggle-desc">On-screen joysticks and buttons.</div>
+              </div>
+              <div class="select-wrapper" style="width: 200px;">
+                <select id="select-touch-mode" class="clean-select">
+                  <option value="auto">AUTO (MOBILE)</option>
+                  <option value="on">ALWAYS ON</option>
+                  <option value="off">OFF (PC ONLY)</option>
+                </select>
+              </div>
+            </div>
+            <div class="setting-row toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">Aim Assist</div>
+                <div class="toggle-desc">Magnetic target snapping on touch.</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="toggle-aim-assist" checked>
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-bottom-actions">
+          <button id="btn-close-settings" class="clean-modal-btn" type="button">
+            <span class="clean-btn-arrow">&gt;</span> BACK
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Developer Cheats Modal -->
+    <div id="cheats-screen" class="overlay-screen hidden">
+      <div class="screen-content cheats-modal">
+        <div class="modal-tactical-header">
+          <div class="modal-tactical-tag">// DEBUG CONSOLE</div>
+          <h1 class="modal-clean-title cheat-glow">DEVELOPER CHEATS</h1>
+        </div>
+
+        <div class="settings-container cheats-container">
+          <!-- God Mode & Infinite Ammo -->
+          <div class="settings-section">
+            <h3 class="section-title">SURVIVOR STATUS</h3>
+
+            <div class="setting-row toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">God Mode</div>
+                <div class="toggle-desc">Immune to all damage.</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cheat-toggle-godmode">
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-row toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-title">Infinite Ammo</div>
+                <div class="toggle-desc">Unlimited clip and reserve.</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cheat-toggle-infammo">
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Economy & Points -->
+          <div class="settings-section">
+            <h3 class="section-title">POINTS &amp; COINS</h3>
+            <div class="cheat-btn-group">
+              <button id="cheat-btn-add-points-1k" class="clean-modal-btn cheat-action-btn">+1,000 $</button>
+              <button id="cheat-btn-add-points-10k" class="clean-modal-btn cheat-action-btn">+10,000 $</button>
+              <button id="cheat-btn-add-points-100k" class="clean-modal-btn cheat-action-btn">+100,000 $</button>
+            </div>
+            <div class="cheat-btn-group" style="margin-top: 8px;">
+              <button id="cheat-btn-add-bc-500" class="clean-modal-btn cheat-action-btn" style="color:#f5c518;">+500 BC</button>
+              <button id="cheat-btn-add-bc-2500" class="clean-modal-btn cheat-action-btn" style="color:#f5c518;">+2,500 BC</button>
+            </div>
+          </div>
+
+          <!-- Weapon Spawner -->
+          <div class="settings-section">
+            <h3 class="section-title">SPAWN WEAPON</h3>
+            <div class="weapon-cheat-grid">
+              <button class="cheat-weapon-btn" data-weapon="m1911">Colt M1911</button>
+              <button class="cheat-weapon-btn" data-weapon="kar98k">Kar98k</button>
+              <button class="cheat-weapon-btn" data-weapon="mp40">MP40</button>
+              <button class="cheat-weapon-btn" data-weapon="shotgun">Trench Gun</button>
+              <button class="cheat-weapon-btn" data-weapon="mg42">MG42</button>
+              <button class="cheat-weapon-btn cheat-raygun-btn" data-weapon="raygun">⚡ Ray Gun</button>
+            </div>
+          </div>
+
+          <!-- Pack-a-Punch Testing Lab (3 Tiers) -->
+          <div class="settings-section">
+            <h3 class="section-title">PACK-A-PUNCH LAB</h3>
+            <div class="pap-dev-status" id="pap-dev-status-box">
+              <div class="pap-status-text">
+                <span>Active: <span id="pap-active-weapon-name" class="pap-weapon-highlight">Colt M1911</span></span>
+                <span id="pap-active-tier-badge" class="pap-badge tier-0">STANDARD</span>
+              </div>
+              <div class="pap-status-details" id="pap-status-details">
+                Damage: 25 | Mag: 8 | Reserve: 80
+              </div>
+            </div>
+
+            <div class="cheat-btn-group" style="margin-top: 8px;">
+              <button id="cheat-btn-pap-upgrade" class="clean-modal-btn cheat-action-btn" style="color:#ffd700;">⚡ UPGRADE (+1 TIER)</button>
+              <button id="cheat-btn-pap-reset" class="clean-modal-btn cheat-action-btn">↺ RESET TO STANDARD</button>
+            </div>
+
+            <div class="cheat-btn-group" style="margin-top: 8px;">
+              <button class="clean-modal-btn cheat-action-btn cheat-pap-tier-btn" data-tier="1">TIER 1</button>
+              <button class="clean-modal-btn cheat-action-btn cheat-pap-tier-btn" data-tier="2">TIER 2</button>
+              <button class="clean-modal-btn cheat-action-btn cheat-pap-tier-btn" data-tier="3" style="color:#ffd700;">TIER 3 (MAX)</button>
+            </div>
+
+            <div class="cheat-btn-group" style="margin-top: 8px;">
+              <button id="cheat-btn-pap-all-max" class="clean-modal-btn cheat-action-btn" style="width: 100%; border-color: #ffd700; color: #ffd700;">★ UPGRADE ALL EQUIPPED TO TIER 3 ★</button>
+            </div>
+          </div>
+
+          <!-- Quick Perks -->
+          <div class="settings-section">
+            <h3 class="section-title">PERKS</h3>
+            <div class="cheat-btn-group">
+              <button id="cheat-btn-give-nugi" class="clean-modal-btn cheat-action-btn">✚ Nugi Perk (HP)</button>
+              <button id="cheat-btn-give-spodi" class="clean-modal-btn cheat-action-btn">⚡ Spodi Perk (Reload)</button>
+            </div>
+          </div>
+
+          <!-- World & Teleport Cheats -->
+          <div class="settings-section">
+            <h3 class="section-title">MAP &amp; DOORS</h3>
+            <div class="cheat-btn-group">
+              <button id="cheat-btn-teleport-underground" class="clean-modal-btn cheat-action-btn" style="color: #d855ff;">⚡ Teleport to Pack-a-Punch</button>
+              <button id="cheat-btn-open-all-doors" class="clean-modal-btn cheat-action-btn">🔓 Open All Barriers &amp; Doors</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-bottom-actions">
+          <button id="btn-close-cheats" class="clean-modal-btn" type="button">
+            <span class="clean-btn-arrow">&gt;</span> BACK
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Perk Upgrades / Armory Modal -->
+    <div id="upgrades-screen" class="overlay-screen hidden">
+      <div class="screen-content upgrades-modal">
+        <div class="modal-header-with-wallet">
+          <div class="modal-tactical-header" style="text-align: left; margin-bottom: 0;">
+            <div class="modal-tactical-tag">// ARMORY</div>
+            <h1 class="modal-clean-title upgrade-glow">PERK UPGRADES</h1>
+            <h2 class="modal-clean-subtitle">UPGRADE PERMANENT PERKS WITH BULLET COINS</h2>
+          </div>
+          <div class="profile-wallet" title="Bullet Coins (BC)">
+            <span class="bc-bullet-icon">
+              <svg viewBox="0 0 24 24" class="svg-bullet"><path d="M12 2C10.5 4 8 8 8 13V20H16V13C16 8 13.5 4 12 2Z" fill="#f5c518" stroke="#8a6d00" stroke-width="1.2"/><rect x="7.5" y="20" width="9" height="2.5" rx="0.5" fill="#c49a00"/><line x1="8.5" y1="13" x2="15.5" y2="13" stroke="#ffeb80" stroke-width="1"/></svg>
+            </span>
+            <span class="bc-amount" id="upgrade-wallet-bc">0</span>
+            <span class="bc-unit">BC</span>
+          </div>
+        </div>
+
+        <div class="upgrades-grid">
+          <!-- NUGI (Juggernog) Upgrade Card -->
+          <div class="upgrade-card" id="card-upgrade-nugi">
+            <div class="card-header">
+              <div class="perk-badge-preview perk-nugi-badge">
+                <span class="badge-glyph">✚</span>
+              </div>
+              <div class="card-title-group">
+                <h3 class="perk-title">NUGI (JUGGERNOG)</h3>
+                <span class="perk-subtitle">Health Capacity &amp; Armor</span>
+              </div>
+              <div class="current-tier-pill" id="nugi-tier-pill">TIER 1 // FIELD STANDARD</div>
+            </div>
+
+            <div class="tier-progress-track">
+              <div class="tier-step tier-1 active" title="Tier 1: Field Standard"><span class="step-num">1</span></div>
+              <div class="tier-connector" id="nugi-conn-1"></div>
+              <div class="tier-step tier-2" title="Tier 2: Tactical Reinforcement"><span class="step-num">2</span></div>
+              <div class="tier-connector" id="nugi-conn-2"></div>
+              <div class="tier-step tier-3" title="Tier 3: Elite Operator"><span class="step-num">3</span></div>
+              <div class="tier-connector" id="nugi-conn-3"></div>
+              <div class="tier-step tier-4" title="Tier 4: Doomsday Prototype"><span class="step-num">4</span></div>
+            </div>
+
+            <div class="perk-description-box" id="nugi-desc-box">
+              <!-- Dynamically populated via JS -->
+            </div>
+
+            <div class="upgrade-card-footer">
+              <button id="btn-upgrade-nugi" class="btn-buy-upgrade" type="button">
+                <span class="bc-bullet-icon"><svg viewBox="0 0 24 24" class="svg-bullet"><path d="M12 2C10.5 4 8 8 8 13V20H16V13C16 8 13.5 4 12 2Z" fill="#f5c518" stroke="#8a6d00" stroke-width="1.2"/><rect x="7.5" y="20" width="9" height="2.5" rx="0.5" fill="#c49a00"/><line x1="8.5" y1="13" x2="15.5" y2="13" stroke="#ffeb80" stroke-width="1"/></svg></span>
+                <span id="nugi-upgrade-btn-text">UPGRADE (400 BC)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- SPODI (Speed Cola) Upgrade Card -->
+          <div class="upgrade-card" id="card-upgrade-spodi">
+            <div class="card-header">
+              <div class="perk-badge-preview perk-spodi-badge">
+                <span class="badge-glyph">⚡</span>
+              </div>
+              <div class="card-title-group">
+                <h3 class="perk-title">SPODI (SPEED COLA)</h3>
+                <span class="perk-subtitle">Reload Speed &amp; Agility</span>
+              </div>
+              <div class="current-tier-pill" id="spodi-tier-pill">TIER 1 // FIELD STANDARD</div>
+            </div>
+
+            <div class="tier-progress-track">
+              <div class="tier-step tier-1 active" title="Tier 1: Field Standard"><span class="step-num">1</span></div>
+              <div class="tier-connector" id="spodi-conn-1"></div>
+              <div class="tier-step tier-2" title="Tier 2: Tactical Reinforcement"><span class="step-num">2</span></div>
+              <div class="tier-connector" id="spodi-conn-2"></div>
+              <div class="tier-step tier-3" title="Tier 3: Elite Operator"><span class="step-num">3</span></div>
+              <div class="tier-connector" id="spodi-conn-3"></div>
+              <div class="tier-step tier-4" title="Tier 4: Doomsday Prototype"><span class="step-num">4</span></div>
+            </div>
+
+            <div class="perk-description-box" id="spodi-desc-box">
+              <!-- Dynamically populated via JS -->
+            </div>
+
+            <div class="upgrade-card-footer">
+              <button id="btn-upgrade-spodi" class="btn-buy-upgrade" type="button">
+                <span class="bc-bullet-icon"><svg viewBox="0 0 24 24" class="svg-bullet"><path d="M12 2C10.5 4 8 8 8 13V20H16V13C16 8 13.5 4 12 2Z" fill="#f5c518" stroke="#8a6d00" stroke-width="1.2"/><rect x="7.5" y="20" width="9" height="2.5" rx="0.5" fill="#c49a00"/><line x1="8.5" y1="13" x2="15.5" y2="13" stroke="#ffeb80" stroke-width="1"/></svg></span>
+                <span id="spodi-upgrade-btn-text">UPGRADE (400 BC)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-bottom-actions">
+          <button id="btn-close-upgrades" class="clean-modal-btn" type="button">
+            <span class="clean-btn-arrow">&gt;</span> BACK
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats & Career Modal -->
+    <div id="stats-screen" class="overlay-screen hidden">
+      <div class="screen-content stats-modal">
+        <div class="modal-tactical-header">
+          <div class="modal-tactical-tag">// DOSSIER</div>
+          <h1 class="modal-clean-title stats-glow">COMBAT RECORD</h1>
+          <h2 class="modal-clean-subtitle">LIFETIME STATS &amp; ACHIEVEMENTS</h2>
+        </div>
+
+        <!-- Military Rank Banner -->
+        <div class="stats-rank-banner">
+          <div class="rank-large-icon" id="stats-rank-icon">🎖️</div>
+          <div class="rank-banner-details">
+            <div class="rank-title-large" id="stats-rank-title">PRIVATE (RANK 1)</div>
+            <div class="rank-progress-container">
+              <div class="rank-bar-bg"><div class="rank-bar-fill" id="stats-rank-bar"></div></div>
+              <span class="rank-xp-text" id="stats-rank-xp">0 / 500 XP (To Next Rank)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-card-val" id="stat-total-games">0</span>
+            <span class="stat-card-lbl">GAMES PLAYED</span>
+          </div>
+          <div class="stat-card stat-card-highlight">
+            <span class="stat-card-val" id="stat-best-round">0</span>
+            <span class="stat-card-lbl">HIGHEST ROUND</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-card-val" id="stat-total-kills">0</span>
+            <span class="stat-card-lbl">KILLS</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-card-val" id="stat-total-headshots">0</span>
+            <span class="stat-card-lbl">HEADSHOTS</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-card-val" id="stat-headshot-pct">0%</span>
+            <span class="stat-card-lbl">HEADSHOT RATIO</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-card-val" id="stat-total-score">0</span>
+            <span class="stat-card-lbl">TOTAL SCORE ($)</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-card-val" id="stat-total-repairs">0</span>
+            <span class="stat-card-lbl">BOARDS REPAIRED</span>
+          </div>
+          <div class="stat-card stat-card-bc">
+            <span class="stat-card-val" id="stat-total-bc-earned">0</span>
+            <span class="stat-card-lbl">TOTAL BC EARNED</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-card-val" id="stat-time-survived">0m 00s</span>
+            <span class="stat-card-lbl">TIME SURVIVED</span>
+          </div>
+        </div>
+
+        <div class="stats-actions">
+          <button id="btn-close-stats" class="clean-modal-btn" type="button">
+            <span class="clean-btn-arrow">&gt;</span> BACK
+          </button>
+          <button id="btn-reset-stats" class="clean-modal-btn clean-btn-danger" type="button">
+            RESET STATS
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Over Screen Modal -->
+    <div id="game-over-screen" class="overlay-screen hidden">
+      <div class="screen-content">
+        <h1 class="game-over-title">YOU DIED</h1>
+        <div id="game-over-rounds" class="game-over-stats">0 ROUNDS</div>
+
+        <div class="stats-summary">
+          <div class="stat-item"><span class="stat-label">ZOMBIES KILLED:</span> <span id="stat-kills">0</span></div>
+          <div class="stat-item"><span class="stat-label">HEADSHOTS:</span> <span id="stat-headshots">0</span></div>
+          <div class="stat-item"><span class="stat-label">TOTAL SCORE EARNED:</span> <span id="stat-score">0</span></div>
+          <div class="stat-item"><span class="stat-label">WINDOWS REPAIRED:</span> <span id="stat-repairs">0</span></div>
+        </div>
+
+        <!-- End of Match BC Spoils Box -->
+        <div class="match-bc-lootbox">
+          <div class="lootbox-title">
+            <span class="bc-bullet-icon"><svg viewBox="0 0 24 24" class="svg-bullet"><path d="M12 2C10.5 4 8 8 8 13V20H16V13C16 8 13.5 4 12 2Z" fill="#f5c518" stroke="#8a6d00" stroke-width="1.2"/><rect x="7.5" y="20" width="9" height="2.5" rx="0.5" fill="#c49a00"/><line x1="8.5" y1="13" x2="15.5" y2="13" stroke="#ffeb80" stroke-width="1"/></svg></span>
+            <span>MATCH REWARDS</span>
+          </div>
+          <div class="loot-breakdown">
+            <div class="loot-row"><span>Kills Bonus:</span><span id="loot-kills-bc">+0 BC</span></div>
+            <div class="loot-row"><span>Headshots Bonus:</span><span id="loot-headshots-bc">+0 BC</span></div>
+            <div class="loot-row"><span>Rounds Bonus:</span><span id="loot-rounds-bc">+0 BC</span></div>
+            <div class="loot-row"><span>Repairs Bonus:</span><span id="loot-repairs-bc">+0 BC</span></div>
+            <div class="loot-row loot-total"><span>TOTAL EARNED:</span><span id="loot-total-bc" class="loot-glow">+0 BC</span></div>
+          </div>
+          <div class="wallet-current-info">
+            <span>NEW BALANCE: </span>
+            <span class="bc-bullet-icon"><svg viewBox="0 0 24 24" class="svg-bullet"><path d="M12 2C10.5 4 8 8 8 13V20H16V13C16 8 13.5 4 12 2Z" fill="#f5c518" stroke="#8a6d00" stroke-width="1.2"/><rect x="7.5" y="20" width="9" height="2.5" rx="0.5" fill="#c49a00"/><line x1="8.5" y1="13" x2="15.5" y2="13" stroke="#ffeb80" stroke-width="1"/></svg></span>
+            <span id="game-over-wallet-bc" class="wallet-val">0 BC</span>
+          </div>
+        </div>
+
+        <div class="game-over-actions">
+          <button id="btn-restart" class="waw-button btn-main">SURVIVE AGAIN</button>
+          <button id="btn-gameover-menu" class="waw-button btn-secondary">MAIN MENU</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Audio Assets & Data -->
+  <script src="assets/audio/audio_data.js"></script>
+
+  <!-- Modular Game Engine Scripts -->
+  <script src="src/weapons.js"></script>
+  <script src="src/audio.js"></script>
+  <script src="src/particles.js"></script>
+  <script src="src/hud.js"></script>
+  <script src="src/lighting.js"></script>
+  <script src="src/map.js"></script>
+  <script src="src/zombie.js"></script>
+  <script src="src/progression.js"></script>
+  <script src="src/player.js"></script>
+  <script src="src/mobile.js"></script>
+  <script src="src/main.js?v=2.7"></script>
+</body>
+</html>
